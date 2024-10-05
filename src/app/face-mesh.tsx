@@ -1,12 +1,12 @@
 "use client";
 
-import type { FaceLandmarker } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useEffect, useRef, useState } from "react";
 
 export const FaceMesh = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [faceLandmarker, _setFaceLandmarker] = useState<FaceLandmarker | null>(
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
     null,
   );
   const _lastVideoTimeRef = useRef(-1);
@@ -80,24 +80,24 @@ export const FaceMesh = () => {
   //   });
   // }, [faceLandmarker]);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     const vision = await FilesetResolver.forVisionTasks(
-  //       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
-  //     );
-  //     const landmarker = await FaceLandmarker.createFromOptions(vision, {
-  //       baseOptions: {
-  //         modelAssetPath:
-  //           "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-  //         delegate: "GPU",
-  //       },
-  //       outputFaceBlendshapes: true,
-  //       numFaces: 1,
-  //       runningMode: "VIDEO",
-  //     });
-  //     setFaceLandmarker(landmarker);
-  //   })();
-  // }, []);
+  useEffect(() => {
+    (async () => {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
+      );
+      const landmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          delegate: "GPU",
+        },
+        outputFaceBlendshapes: true,
+        numFaces: 1,
+        runningMode: "VIDEO",
+      });
+      setFaceLandmarker(landmarker);
+    })();
+  }, []);
 
   useEffect(() => {
     navigator.mediaDevices
