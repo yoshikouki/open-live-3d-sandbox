@@ -120,25 +120,25 @@ export const FaceMesh = () => {
   }, [renderLoop]);
 
   return (
-    <div className="absolute bottom-0 right-0">
+    <div className="absolute right-0 bottom-0">
       <div className="relative">
-      {/* biome-ignore lint: lint/a11y/useMediaCaption */}
-      <video
-        id="webcam"
-        autoPlay
-        playsInline
-        ref={videoRef}
-        className="h-full w-full"
-        style={{ width: "640px", height: "480px" }}
-      />
-      <canvas
-        ref={(canvas) => {
-          if (!canvas) return;
-          canvasCtxRef.current = canvas?.getContext("2d");
-        }}
-        className="absolute top-0 left-0"
-      />
-    </div>
+        {/* biome-ignore lint: lint/a11y/useMediaCaption */}
+        <video
+          id="webcam"
+          autoPlay
+          playsInline
+          ref={videoRef}
+          className="h-full w-full"
+          style={{ width: "640px", height: "480px" }}
+        />
+        <canvas
+          ref={(canvas) => {
+            if (!canvas) return;
+            canvasCtxRef.current = canvas?.getContext("2d");
+          }}
+          className="absolute top-0 left-0"
+        />
+      </div>
     </div>
   );
 };

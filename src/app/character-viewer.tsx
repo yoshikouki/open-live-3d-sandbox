@@ -1,8 +1,13 @@
 "use client";
 
-import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import {
+  type VRM,
+  VRMHumanBoneName,
+  VRMLoaderPlugin,
+  VRMUtils,
+} from "@pixiv/three-vrm";
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
@@ -71,6 +76,28 @@ const Character = () => {
       },
     );
   }, [gltf]);
+
+  useFrame((state, _delta) => {
+    if (!gltf) return;
+    const vrm: VRM = gltf.userData.vrm;
+    const _pose = vrm.humanoid.getRawPose();
+    const maxRotation = Math.PI / 6; // 最大回転角度を小さくして自然な動きに
+    const speed = 0.5; // 回転速度を遅くして自然な動きに
+    const time = state.clock.getElapsedTime();
+    const headRotation = Math.sin(time * speed) * maxRotation;
+
+    vrm.humanoid.setRawPose({
+      [VRMHumanBoneName.Head]: {
+        rotation: [0, headRotation * 0.1, 0, 1],
+      },
+      [VRMHumanBoneName.Neck]: {
+        rotation: [0, headRotation * 0.3, 0, 1],
+      },
+      [VRMHumanBoneName.Hips]: {
+        rotation: [0, headRotation * 0.9, 0, 1],
+      },
+    });
+  });
 
   return (
     <>
