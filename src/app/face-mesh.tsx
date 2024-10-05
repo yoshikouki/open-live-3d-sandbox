@@ -120,7 +120,8 @@ export const FaceMesh = () => {
   }, [renderLoop]);
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center">
+    <div className="absolute bottom-0 right-0">
+      <div className="relative">
       {/* biome-ignore lint: lint/a11y/useMediaCaption */}
       <video
         id="webcam"
@@ -135,8 +136,9 @@ export const FaceMesh = () => {
           if (!canvas) return;
           canvasCtxRef.current = canvas?.getContext("2d");
         }}
-        className="absolute"
+        className="absolute top-0 left-0"
       />
+    </div>
     </div>
   );
 };
