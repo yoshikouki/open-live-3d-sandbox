@@ -1,9 +1,9 @@
-import Image from "next/image";
+import { FaceMesh } from "./face-mesh";
 
 export default function Home() {
   return (
-    <main className="flex flex-col items-center justify-center min-h-svh w-full">
-      Face Tracking
-      </main>
+    <main className="flex min-h-svh w-full flex-col items-center justify-center">
+      <FaceMesh />
+    </main>
   );
 }
