@@ -1,10 +1,11 @@
+import { CharacterViewer } from "./character-viewer";
 import { FaceMesh } from "./face-mesh";
 
 export default function Home() {
   return (
-    <main className="flex min-h-svh w-full flex-col items-center justify-center">
+    <main className="h-svh w-full">
+      <CharacterViewer />
       <FaceMesh />
-      
     </main>
   );
 }
