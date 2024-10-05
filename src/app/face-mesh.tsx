@@ -1,6 +1,11 @@
 "use client";
 
-import { DrawingUtils, FaceLandmarker, FaceLandmarkerResult, FilesetResolver } from "@mediapipe/tasks-vision";
+import {
+  DrawingUtils,
+  FaceLandmarker,
+  type FaceLandmarkerResult,
+  FilesetResolver,
+} from "@mediapipe/tasks-vision";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export const FaceMesh = () => {
@@ -112,10 +117,11 @@ export const FaceMesh = () => {
         videoRef.current.srcObject = stream;
         videoRef.current.addEventListener("loadeddata", renderLoop);
       });
-  }, [faceLandmarker]);
+  }, [renderLoop]);
 
   return (
-    <div className="relative h-full w-full flex items-center justify-center">
+    <div className="relative flex h-full w-full items-center justify-center">
+      {/* biome-ignore lint: lint/a11y/useMediaCaption */}
       <video
         id="webcam"
         autoPlay
