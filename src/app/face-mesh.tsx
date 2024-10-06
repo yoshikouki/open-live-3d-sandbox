@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export const FaceMesh = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const isMountedRef = useRef(true);
   const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
     null,
   );
@@ -90,6 +91,8 @@ export const FaceMesh = () => {
 
   useEffect(() => {
     (async () => {
+      if (!isMountedRef.current) return;
+
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
       );
@@ -105,6 +108,10 @@ export const FaceMesh = () => {
       });
       setFaceLandmarker(landmarker);
     })();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -117,6 +124,9 @@ export const FaceMesh = () => {
         videoRef.current.srcObject = stream;
         videoRef.current.addEventListener("loadeddata", renderLoop);
       });
+    return () => {
+      videoRef.current?.removeEventListener("loadeddata", renderLoop);
+    };
   }, [renderLoop]);
 
   return (

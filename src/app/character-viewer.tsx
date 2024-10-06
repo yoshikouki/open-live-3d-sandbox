@@ -87,15 +87,15 @@ const Character = () => {
     const headRotation = Math.sin(time * speed) * maxRotation;
 
     vrm.humanoid.setRawPose({
-      [VRMHumanBoneName.Head]: {
-        rotation: [0, headRotation * 0.1, 0, 1],
-      },
+      // [VRMHumanBoneName.Head]: {
+      //   rotation: [0, headRotation * 0.1, 0, 1],
+      // },
       [VRMHumanBoneName.Neck]: {
         rotation: [0, headRotation * 0.3, 0, 1],
       },
-      [VRMHumanBoneName.Hips]: {
-        rotation: [0, headRotation * 0.9, 0, 1],
-      },
+      // [VRMHumanBoneName.Hips]: {
+      //   rotation: [0, headRotation * 0.9, 0, 1],
+      // },
     });
   });
 
