@@ -1,6 +1,6 @@
 "use client";
 
-import { useFaceMesh } from "@/hooks/use-face-mesh";
+import { useMediaPipeVision } from "@/hooks/use-media-pipe-vision";
 import type { FaceLandmarkerResult } from "@mediapipe/tasks-vision";
 import {
   type VRM,
@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
 
 export const CharacterViewer = () => {
-  const { videoRef, detect } = useFaceMesh();
+  const { videoRef, detect } = useMediaPipeVision();
   const [characterGltf, setCharacterGltf] = useState<GLTF>();
 
   useEffect(() => {

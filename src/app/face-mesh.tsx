@@ -3,19 +3,20 @@
 import {
   DrawingUtils,
   FaceLandmarker,
-  type FaceLandmarkerResult,
+  PoseLandmarker,
+  type PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 import { useCallback, useEffect, useRef } from "react";
 
-import { useFaceMesh } from "../hooks/use-face-mesh";
+import { useMediaPipeVision } from "../hooks/use-media-pipe-vision";
 
 export const FaceMesh = () => {
-  const { videoRef, detect } = useFaceMesh();
+  const { videoRef, detect } = useMediaPipeVision();
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const renderLoop = useCallback(() => {
     if (!videoRef.current || !canvasCtxRef.current) return;
-    let results: FaceLandmarkerResult | undefined;
+    let results: PoseLandmarkerResult | undefined;
     try {
       results = detect();
     } catch (error) {
@@ -29,50 +30,50 @@ export const FaceMesh = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     if (!results) return;
-    for (const landmarks of results.faceLandmarks) {
+    for (const landmarks of results.landmarks) {
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_TESSELATION,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#C0C0C070", lineWidth: 1 },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#FF3030" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#FF3030" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_LEFT_EYE,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#30FF30" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#30FF30" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#E0E0E0" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_LIPS,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#E0E0E0" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#FF3030" },
       );
       drawingUtils.drawConnectors(
         landmarks,
-        FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS,
+        PoseLandmarker.POSE_CONNECTIONS,
         { color: "#30FF30" },
       );
     }

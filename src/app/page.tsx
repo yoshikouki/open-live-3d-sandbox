@@ -4,7 +4,8 @@ import { FaceMesh } from "./face-mesh";
 export default function Home() {
   return (
     <main className="h-svh w-full">
-      <CharacterViewer />
+      {/* <CharacterViewer /> */}
+      <FaceMesh />
     </main>
   );
 }
