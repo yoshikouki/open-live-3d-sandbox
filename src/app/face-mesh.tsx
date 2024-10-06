@@ -2,106 +2,81 @@
 
 import {
   DrawingUtils,
-  FaceLandmarker,
   PoseLandmarker,
   type PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
-import { useCallback, useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { useMediaPipeVision } from "../hooks/use-media-pipe-vision";
 
 export const FaceMesh = () => {
-  const { videoRef, detect } = useMediaPipeVision();
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const renderLoop = useCallback(() => {
-    if (!videoRef.current || !canvasCtxRef.current) return;
-    let results: PoseLandmarkerResult | undefined;
-    try {
-      results = detect();
-    } catch (error) {
-      console.error("Failed to detect face:", error);
-      return;
-    }
-
-    const drawingUtils = new DrawingUtils(canvasCtxRef.current);
-    const video = videoRef.current;
-    const canvas = canvasCtxRef.current.canvas;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    if (!results) return;
-    for (const landmarks of results.landmarks) {
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#C0C0C070", lineWidth: 1 },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#FF3030" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#FF3030" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#30FF30" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#30FF30" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#E0E0E0" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#E0E0E0" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#FF3030" },
-      );
-      drawingUtils.drawConnectors(
-        landmarks,
-        PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#30FF30" },
-      );
-    }
-    requestAnimationFrame(() => {
-      renderLoop();
-    });
-  }, [detect, videoRef.current]);
-
-  useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        videoRef.current.addEventListener("loadeddata", renderLoop);
-      })
-      .catch((error) => {
-        console.error("Failed to get user media:", error);
-      });
-    return () => {
-      videoRef.current?.removeEventListener("loadeddata", renderLoop);
-      const stream = videoRef.current?.srcObject;
-      if (!(stream instanceof MediaStream)) return;
-      for (const track of stream.getTracks()) {
-        track.stop();
+  const { videoRef, detect } = useMediaPipeVision({
+    onFrame: (video) => {
+      if (!video || !canvasCtxRef.current) return;
+      let results: PoseLandmarkerResult | undefined;
+      try {
+        results = detect();
+      } catch (error) {
+        console.error("Failed to detect face:", error);
+        return;
       }
-    };
-  }, [renderLoop, videoRef.current]);
+
+      const drawingUtils = new DrawingUtils(canvasCtxRef.current);
+      const canvas = canvasCtxRef.current.canvas;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      if (!results) return;
+      for (const landmarks of results.landmarks) {
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#C0C0C070", lineWidth: 1 },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#FF3030" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#FF3030" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#30FF30" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#30FF30" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#E0E0E0" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#E0E0E0" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#FF3030" },
+        );
+        drawingUtils.drawConnectors(
+          landmarks,
+          PoseLandmarker.POSE_CONNECTIONS,
+          { color: "#30FF30" },
+        );
+      }
+    },
+  });
 
   return (
     <div className="absolute right-0 bottom-0">

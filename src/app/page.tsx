@@ -1,4 +1,3 @@
-import { CharacterViewer } from "./character-viewer";
 import { FaceMesh } from "./face-mesh";
 
 export default function Home() {

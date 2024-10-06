@@ -1,7 +1,12 @@
-import { FaceLandmarker, FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
+import {
+  FaceLandmarker,
+  FilesetResolver,
+  PoseLandmarker,
+  type PoseLandmarkerResult,
+} from "@mediapipe/tasks-vision";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const initializeFaceLandmarker = async () => {
+const _initializeFaceLandmarker = async () => {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
   );
@@ -33,20 +38,34 @@ const initializePoseLandmarker = async () => {
   return landmarker;
 };
 
-export const useMediaPipeVision = () => {
+export const useMediaPipeVision = (props?: {
+  onFrame: (video: HTMLVideoElement | null) => void;
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isMountedRef = useRef(false);
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(
     null,
   );
+  const poseLandmarkerResultRef = useRef<PoseLandmarkerResult | null>(null);
+  const [_isReady, _setIsReady] = useState(false);
 
   const detect = useCallback(() => {
     if (!videoRef.current || !poseLandmarker) return;
-
-    const results = poseLandmarker.detectForVideo(videoRef.current, performance.now());
+    const results = poseLandmarker.detectForVideo(
+      videoRef.current,
+      performance.now(),
+    );
+    poseLandmarkerResultRef.current = results;
     return results;
   }, [poseLandmarker]);
 
+  const onFrame = useCallback(() => {
+    detect();
+    props?.onFrame(videoRef.current);
+    requestAnimationFrame(onFrame);
+  }, [detect, props?.onFrame]);
+
+  // Initialize pose landmarker
   useEffect(() => {
     if (isMountedRef.current) {
       return () => poseLandmarker?.close();
@@ -59,5 +78,29 @@ export const useMediaPipeVision = () => {
     return () => poseLandmarker?.close();
   }, [poseLandmarker]);
 
-  return { videoRef, detect };
+  // Initialize webcam
+  useEffect(() => {
+    if (!videoRef.current) return;
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream;
+        videoRef.current.addEventListener("loadeddata", () => {
+          requestAnimationFrame(onFrame);
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to get user media:", error);
+      });
+    return () => {
+      const stream = videoRef.current?.srcObject;
+      if (!(stream instanceof MediaStream)) return;
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
+    };
+  }, [onFrame]);
+
+  return { videoRef, detect, poseLandmarks: poseLandmarkerResultRef.current };
 };

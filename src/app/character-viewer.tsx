@@ -1,7 +1,6 @@
 "use client";
 
 import { useMediaPipeVision } from "@/hooks/use-media-pipe-vision";
-import type { FaceLandmarkerResult } from "@mediapipe/tasks-vision";
 import {
   type VRM,
   VRMHumanBoneName,
@@ -9,39 +8,21 @@ import {
   VRMUtils,
 } from "@pixiv/three-vrm";
 import { Html, OrbitControls } from "@react-three/drei";
-import { Canvas, RenderCallback, useFrame } from "@react-three/fiber";
-import { useEffect, useState } from "react";
+import { Canvas, type RenderCallback, useFrame } from "@react-three/fiber";
+import { useCallback, useEffect, useState } from "react";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
 
 export const CharacterViewer = () => {
-  const { videoRef, detect } = useMediaPipeVision();
+  const { videoRef } = useMediaPipeVision();
   const [characterGltf, setCharacterGltf] = useState<GLTF>();
 
-  useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        videoRef.current.addEventListener("loadeddata", detect);
-      })
-      .catch((error) => {
-        console.error("カメラの取得に失敗しました:", error);
-      });
-    return () => {
-      videoRef.current?.removeEventListener("loadeddata", detect);
-      const stream = videoRef.current?.srcObject;
-      if (!(stream instanceof MediaStream)) return;
-      for (const track of stream.getTracks()) {
-        track.stop();
-      }
-    };
-  }, [detect, videoRef.current]);
+  const onCharacterLoaded = useCallback(
+    (character: GLTF) => setCharacterGltf(character),
+    [],
+  );
 
-  const onCharacterLoaded = (character: GLTF) => setCharacterGltf(character);
-
-  const onFrame: RenderCallback = (state, delta) => {
+  const onFrame: RenderCallback = (state, _delta) => {
     if (!characterGltf) return;
     const vrm: VRM = characterGltf.userData.vrm;
     const maxRotation = Math.PI / 6; // 最大回転角度を小さくして自然な動きに
@@ -91,7 +72,11 @@ export const CharacterViewer = () => {
           maxDistance={3}
         />
 
-        <Character characterGltf={characterGltf} onCharacterLoaded={onCharacterLoaded} onFrame={onFrame} />
+        <Character
+          characterGltf={characterGltf}
+          onCharacterLoaded={onCharacterLoaded}
+          onFrame={onFrame}
+        />
 
         <gridHelper />
       </Canvas>
@@ -116,7 +101,11 @@ const Character = ({
   characterGltf,
   onCharacterLoaded,
   onFrame,
-}: { characterGltf: GLTF | undefined; onCharacterLoaded: (gltf: GLTF) => void, onFrame: RenderCallback }) => {
+}: {
+  characterGltf: GLTF | undefined;
+  onCharacterLoaded: (gltf: GLTF) => void;
+  onFrame: RenderCallback;
+}) => {
   const [progress, setProgress] = useState<number>(0);
 
   useEffect(() => {
@@ -138,7 +127,7 @@ const Character = ({
         console.error("VRM loader Error:", error);
       },
     );
-  }, []);
+  }, [onCharacterLoaded]);
 
   useFrame(onFrame);
 
