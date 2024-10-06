@@ -4,35 +4,30 @@ import {
   DrawingUtils,
   FaceLandmarker,
   type FaceLandmarkerResult,
-  FilesetResolver,
 } from "@mediapipe/tasks-vision";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+import { useFaceMesh } from "../hooks/use-face-mesh";
 
 export const FaceMesh = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, detect } = useFaceMesh();
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const isMountedRef = useRef(true);
-  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
-    null,
-  );
-  const lastVideoTimeRef = useRef(-1);
 
   const renderLoop = useCallback(() => {
     if (!videoRef.current || !canvasCtxRef.current) return;
     let results: FaceLandmarkerResult | undefined;
+    try {
+      results = detect();
+    } catch (error) {
+      console.error("Failed to detect face:", error);
+      return;
+    }
+
     const drawingUtils = new DrawingUtils(canvasCtxRef.current);
     const video = videoRef.current;
     const canvas = canvasCtxRef.current.canvas;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    lastVideoTimeRef.current = video.currentTime;
-    try {
-      results = faceLandmarker?.detectForVideo(video, performance.now());
-    } catch (error) {
-      console.error("顔検出中にエラーが発生しました:", error);
-      return;
-    }
     if (!results) return;
     for (const landmarks of results.faceLandmarks) {
       drawingUtils.drawConnectors(
@@ -84,50 +79,28 @@ export const FaceMesh = () => {
     requestAnimationFrame(() => {
       renderLoop();
     });
-    return () => {
-      faceLandmarker?.close();
-    };
-  }, [faceLandmarker]);
-
-  useEffect(() => {
-    (async () => {
-      if (!isMountedRef.current) return;
-
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
-      );
-      const landmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-          delegate: "GPU",
-        },
-        outputFaceBlendshapes: true,
-        numFaces: 1,
-        runningMode: "VIDEO",
-      });
-      setFaceLandmarker(landmarker);
-    })();
-
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  }, [detect, videoRef.current]);
 
   useEffect(() => {
     navigator.mediaDevices
-      .getUserMedia({
-        video: true,
-      })
+      .getUserMedia({ video: true })
       .then((stream) => {
         if (!videoRef.current) return;
         videoRef.current.srcObject = stream;
         videoRef.current.addEventListener("loadeddata", renderLoop);
+      })
+      .catch((error) => {
+        console.error("Failed to get user media:", error);
       });
     return () => {
       videoRef.current?.removeEventListener("loadeddata", renderLoop);
+      const stream = videoRef.current?.srcObject;
+      if (!(stream instanceof MediaStream)) return;
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
     };
-  }, [renderLoop]);
+  }, [renderLoop, videoRef.current]);
 
   return (
     <div className="absolute right-0 bottom-0">
