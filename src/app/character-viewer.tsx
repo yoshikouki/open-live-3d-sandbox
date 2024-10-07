@@ -53,15 +53,15 @@ export const CharacterViewer = () => {
         }),
   );
 
-  const _onCharacterLoaded = useCallback(
+  const onCharacterLoaded = useCallback(
     (character: GLTF) => setCharacterGltf(character),
     [],
   );
 
-  const _onFrame: RenderCallback = (_state, _delta) => {
+  const onFrame: RenderCallback = (_state, _delta) => {
     if (!poseLandmarks || !characterGltf) return;
     const vrm: VRM = characterGltf.userData.vrm;
-    const pose = poseToVrm(poseLandmarks);
+    const pose = poseToVrm(poseLandmarks.worldLandmarks);
     vrm.humanoid.setRawPose(pose);
   };
 
@@ -89,19 +89,17 @@ export const CharacterViewer = () => {
           enableZoom={true}
           enablePan={true}
           enableDamping={true}
-          target={new THREE.Vector3(0, 0, 0)}
           minDistance={5}
-          maxDistance={10}
-          // target={new THREE.Vector3(0, 1.5, 0)}
+          target={new THREE.Vector3(0, 1.5, 0)}
           // minDistance={1}
           // maxDistance={3}
         />
 
-        {/* <Character
+        <Character
           characterGltf={characterGltf}
           onCharacterLoaded={onCharacterLoaded}
           onFrame={onFrame}
-        /> */}
+        />
         <PoseLandmarksRenderer worldLandmarks={smoothedWorldLandmarks} />
 
         <gridHelper />
@@ -123,7 +121,7 @@ export const CharacterViewer = () => {
   );
 };
 
-const _Character = ({
+const Character = ({
   characterGltf,
   onCharacterLoaded,
   onFrame,

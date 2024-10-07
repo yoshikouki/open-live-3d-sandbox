@@ -1,15 +1,15 @@
-import type {
-  NormalizedLandmark,
-  PoseLandmarkerResult,
-} from "@mediapipe/tasks-vision";
-import { VRMHumanBoneName, type VRMPose } from "@pixiv/three-vrm";
-import * as THREE from "three";
+import type { Landmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
+import {
+  VRMHumanBoneName,
+  type VRMPose,
+  type VRMPoseTransform,
+} from "@pixiv/three-vrm";
 
 // Coefficient of EMA (0 < alpha <= 1).
 // Smaller: smoother movement, but less responsive.
 // Larger: more responsive, but noise is more likely to remain.
 export const EMA_ALPHA = 0.1;
-export const SCALE = 2;
+export const SCALE = 1;
 export const ROOT_OFFSET = [0, 0, 0] as const;
 
 export const MediaPipePoseLandmarksIndex = {
@@ -48,7 +48,7 @@ export const MediaPipePoseLandmarksIndex = {
   rightFootIndex: 32,
 };
 
-const _boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
+const boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
   [VRMHumanBoneName.Spine]: VRMHumanBoneName.Hips,
   [VRMHumanBoneName.Neck]: VRMHumanBoneName.Spine,
   [VRMHumanBoneName.Head]: VRMHumanBoneName.Neck,
@@ -67,12 +67,66 @@ const _boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
 };
 
 export const poseToVrm = (
-  poseLandmarkerResult: PoseLandmarkerResult,
+  worldLandmarks: PoseLandmarkerResult["worldLandmarks"],
 ): VRMPose => {
   const vrmPose: VRMPose = {};
 
-  const _transformedLandmarks =
-    poseLandmarkerResult.landmarks.map(transformLandmark);
+  for (const pose of worldLandmarks) {
+    if (!pose[0]) break;
+    // Hips
+    const leftHip = pose[MediaPipePoseLandmarksIndex.leftHip];
+    const rightHip = pose[MediaPipePoseLandmarksIndex.rightHip];
+    const hipsPosition = {
+      x: (leftHip.x + rightHip.x) / 2,
+      y: (leftHip.y + rightHip.y) / 2,
+      z: (leftHip.z + rightHip.z) / 2,
+      visibility: leftHip.visibility,
+    };
+    vrmPose[VRMHumanBoneName.Hips] = transformLandmarkToVRMPose(hipsPosition);
+
+    // Neck
+    const nose = pose[MediaPipePoseLandmarksIndex.nose];
+    const neckPosition = {
+      x: nose.x,
+      y: nose.y,
+      z: nose.z,
+      visibility: nose.visibility,
+    };
+    vrmPose[VRMHumanBoneName.Neck] = transformLandmarkToVRMPose(neckPosition);
+
+    // Head
+    vrmPose[VRMHumanBoneName.Head] = transformLandmarkToVRMPose(nose);
+
+    // Left Upper Arm
+    vrmPose[VRMHumanBoneName.LeftUpperArm] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.leftShoulder],
+    );
+
+    // Left Lower Arm
+    vrmPose[VRMHumanBoneName.LeftLowerArm] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.leftElbow],
+    );
+
+    // Left Hand
+    vrmPose[VRMHumanBoneName.LeftHand] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.leftWrist],
+    );
+
+    // Right Upper Arm
+    vrmPose[VRMHumanBoneName.RightUpperArm] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.rightShoulder],
+    );
+
+    // Right Lower Arm
+    vrmPose[VRMHumanBoneName.RightLowerArm] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.rightElbow],
+    );
+
+    // Right Hand
+    vrmPose[VRMHumanBoneName.RightHand] = transformLandmarkToVRMPose(
+      pose[MediaPipePoseLandmarksIndex.rightWrist],
+    );
+  }
 
   return vrmPose;
 };
@@ -85,10 +139,12 @@ export const convertMediaPipeToThreeJS = (x: number, y: number, z: number) => {
   ];
 };
 
-const transformLandmark = (landmark: NormalizedLandmark): THREE.Vector3 => {
-  return new THREE.Vector3(
-    landmark.x, // X軸はそのまま
-    -landmark.y, // Y軸を反転
-    -landmark.z, // Z軸を反転
+const transformLandmarkToVRMPose = (landmark: Landmark): VRMPoseTransform => {
+  if (!landmark) return {};
+  const [x, y, z] = convertMediaPipeToThreeJS(
+    landmark.x,
+    landmark.y,
+    landmark.z,
   );
+  return { position: [x, y, z] };
 };
