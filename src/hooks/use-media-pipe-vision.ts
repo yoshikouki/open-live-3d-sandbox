@@ -52,7 +52,6 @@ export const useMediaPipeVision = (props?: {
   );
   const [poseLandmarkerResult, setPoseLandmarkerResult] =
     useState<PoseLandmarkerResult | null>(null);
-  const [_isReady, _setIsReady] = useState(false);
 
   const detect = useCallback(() => {
     if (!videoRef.current || !poseLandmarker) return;

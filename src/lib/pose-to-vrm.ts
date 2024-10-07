@@ -5,6 +5,13 @@ import type {
 import { VRMHumanBoneName, type VRMPose } from "@pixiv/three-vrm";
 import * as THREE from "three";
 
+// Coefficient of EMA (0 < alpha <= 1).
+// Smaller: smoother movement, but less responsive.
+// Larger: more responsive, but noise is more likely to remain.
+export const EMA_ALPHA = 0.1;
+export const SCALE = 2;
+export const ROOT_OFFSET = [0, 0, 0] as const;
+
 export const MediaPipePoseLandmarksIndex = {
   nose: 0,
   leftInnerEye: 1,
@@ -41,7 +48,7 @@ export const MediaPipePoseLandmarksIndex = {
   rightFootIndex: 32,
 };
 
-const boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
+const _boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
   [VRMHumanBoneName.Spine]: VRMHumanBoneName.Hips,
   [VRMHumanBoneName.Neck]: VRMHumanBoneName.Spine,
   [VRMHumanBoneName.Head]: VRMHumanBoneName.Neck,
@@ -64,10 +71,18 @@ export const poseToVrm = (
 ): VRMPose => {
   const vrmPose: VRMPose = {};
 
-  const transformedLandmarks =
+  const _transformedLandmarks =
     poseLandmarkerResult.landmarks.map(transformLandmark);
 
   return vrmPose;
+};
+
+export const convertMediaPipeToThreeJS = (x: number, y: number, z: number) => {
+  return [
+    x * SCALE + ROOT_OFFSET[0],
+    -y * SCALE + ROOT_OFFSET[1],
+    z * SCALE + ROOT_OFFSET[2],
+  ];
 };
 
 const transformLandmark = (landmark: NormalizedLandmark): THREE.Vector3 => {

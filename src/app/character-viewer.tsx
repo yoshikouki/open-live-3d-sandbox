@@ -1,11 +1,16 @@
 "use client";
 
 import { useMediaPipeVision } from "@/hooks/use-media-pipe-vision";
-import { poseToVrm } from "@/lib/pose-to-vrm";
+import {
+  EMA_ALPHA,
+  MediaPipePoseLandmarksIndex,
+  convertMediaPipeToThreeJS,
+  poseToVrm,
+} from "@/lib/pose-to-vrm";
 import { type VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, type RenderCallback, useFrame } from "@react-three/fiber";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
 import { PoseLandmarksRenderer } from "./pose-landmarks-renderer";
@@ -13,13 +18,47 @@ import { PoseLandmarksRenderer } from "./pose-landmarks-renderer";
 export const CharacterViewer = () => {
   const { videoRef, poseLandmarks } = useMediaPipeVision();
   const [characterGltf, setCharacterGltf] = useState<GLTF>();
+  const smoothedPoseLandmarksRef = useRef<{
+    [key: string]: [number, number, number];
+  }>({});
 
-  const onCharacterLoaded = useCallback(
+  const smoothedWorldLandmarks = poseLandmarks?.worldLandmarks.map(
+    (pose, poseIndex) =>
+      pose.map((landmark, landmarkIndex) => {
+        if (landmarkIndex > MediaPipePoseLandmarksIndex.rightHip) return null;
+
+        const key = `pose-${poseIndex}-landmark-${landmarkIndex}`;
+        const previous = smoothedPoseLandmarksRef.current[key];
+        const [x, y, z] = convertMediaPipeToThreeJS(
+          landmark.x,
+          landmark.y,
+          landmark.z,
+        );
+
+        if (!previous) {
+          // First frame
+          smoothedPoseLandmarksRef.current[key] = [x, y, z];
+          return { x, y, z };
+        }
+        // Apply EMA
+        const smoothedX = EMA_ALPHA * x + (1 - EMA_ALPHA) * previous[0];
+        const smoothedY = EMA_ALPHA * y + (1 - EMA_ALPHA) * previous[1];
+        const smoothedZ = EMA_ALPHA * z + (1 - EMA_ALPHA) * previous[2];
+        smoothedPoseLandmarksRef.current[key] = [
+          smoothedX,
+          smoothedY,
+          smoothedZ,
+        ];
+        return { x: smoothedX, y: smoothedY, z: smoothedZ };
+      }),
+  );
+
+  const _onCharacterLoaded = useCallback(
     (character: GLTF) => setCharacterGltf(character),
     [],
   );
 
-  const onFrame: RenderCallback = (state, _delta) => {
+  const _onFrame: RenderCallback = (_state, _delta) => {
     if (!poseLandmarks || !characterGltf) return;
     const vrm: VRM = characterGltf.userData.vrm;
     const pose = poseToVrm(poseLandmarks);
@@ -63,7 +102,7 @@ export const CharacterViewer = () => {
           onCharacterLoaded={onCharacterLoaded}
           onFrame={onFrame}
         /> */}
-        <PoseLandmarksRenderer poseLandmarks={poseLandmarks} />
+        <PoseLandmarksRenderer worldLandmarks={smoothedWorldLandmarks} />
 
         <gridHelper />
       </Canvas>
@@ -75,7 +114,7 @@ export const CharacterViewer = () => {
             autoPlay
             playsInline
             ref={videoRef}
-            className="h-full w-full rounded-lg hidden"
+            className="hidden h-full w-full rounded-lg"
             style={{ width: "640px", height: "480px" }}
           />
         </div>
@@ -84,7 +123,7 @@ export const CharacterViewer = () => {
   );
 };
 
-const Character = ({
+const _Character = ({
   characterGltf,
   onCharacterLoaded,
   onFrame,
