@@ -59,9 +59,9 @@ export const CharacterViewer = () => {
   );
 
   const onFrame: RenderCallback = (_state, _delta) => {
-    if (!poseLandmarks || !characterGltf) return;
+    if (!smoothedWorldLandmarks || !characterGltf) return;
     const vrm: VRM = characterGltf.userData.vrm;
-    const pose = poseToVrm(poseLandmarks.worldLandmarks);
+    const pose = poseToVrm(vrm, smoothedWorldLandmarks);
     vrm.humanoid.setRawPose(pose);
   };
 

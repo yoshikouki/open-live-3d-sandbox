@@ -1,9 +1,11 @@
 import type { Landmark, PoseLandmarkerResult } from "@mediapipe/tasks-vision";
 import {
+  type VRM,
   VRMHumanBoneName,
   type VRMPose,
   type VRMPoseTransform,
 } from "@pixiv/three-vrm";
+import * as THREE from "three";
 
 // Coefficient of EMA (0 < alpha <= 1).
 // Smaller: smoother movement, but less responsive.
@@ -67,6 +69,7 @@ const boneHierarchy: { [key in VRMHumanBoneName]?: VRMHumanBoneName } = {
 };
 
 export const poseToVrm = (
+  vrm: VRM,
   worldLandmarks: PoseLandmarkerResult["worldLandmarks"],
 ): VRMPose => {
   const vrmPose: VRMPose = {};
@@ -76,59 +79,140 @@ export const poseToVrm = (
     // Hips
     const leftHip = pose[MediaPipePoseLandmarksIndex.leftHip];
     const rightHip = pose[MediaPipePoseLandmarksIndex.rightHip];
-    const hipsPosition = {
-      x: (leftHip.x + rightHip.x) / 2,
-      y: (leftHip.y + rightHip.y) / 2,
-      z: (leftHip.z + rightHip.z) / 2,
-      visibility: leftHip.visibility,
+    const hipBone = vrm.humanoid.getRawBoneNode(VRMHumanBoneName.Hips);
+    const offset = {
+      x: hipBone?.position?.x || 0,
+      y: hipBone?.position?.y || 0,
+      z: hipBone?.position?.z || 0,
     };
-    vrmPose[VRMHumanBoneName.Hips] = transformLandmarkToVRMPose(hipsPosition);
+    const hipsPosition = new THREE.Vector3(
+      offset.x + (leftHip.x + rightHip.x) / 2,
+      offset.y + (leftHip.y + rightHip.y) / 2,
+      offset.z + (leftHip.z + rightHip.z) / 2,
+    );
+
+    // Spine
+    const leftShoulder = pose[MediaPipePoseLandmarksIndex.leftShoulder];
+    const rightShoulder = pose[MediaPipePoseLandmarksIndex.rightShoulder];
+    const spinePosition = new THREE.Vector3(
+      offset.x + (leftShoulder.x + rightShoulder.x) / 2,
+      offset.y + (leftShoulder.y + rightShoulder.y) / 2,
+      offset.z + (leftShoulder.z + rightShoulder.z) / 2,
+    );
+    const spineRotation = computeBoneRotation(hipsPosition, spinePosition);
+    vrmPose[VRMHumanBoneName.Spine] = {
+      rotation: [
+        spineRotation.x,
+        spineRotation.y,
+        spineRotation.z,
+        spineRotation.w,
+      ],
+    };
 
     // Neck
     const nose = pose[MediaPipePoseLandmarksIndex.nose];
-    const neckPosition = {
-      x: nose.x,
-      y: nose.y,
-      z: nose.z,
-      visibility: nose.visibility,
+    const neckPosition = new THREE.Vector3(
+      offset.x + nose.x,
+      offset.y + nose.y,
+      offset.z + nose.z,
+    );
+    const neckRotation = computeBoneRotation(spinePosition, neckPosition);
+    vrmPose[VRMHumanBoneName.Neck] = {
+      rotation: [
+        neckRotation.x,
+        neckRotation.y,
+        neckRotation.z,
+        neckRotation.w,
+      ],
     };
-    vrmPose[VRMHumanBoneName.Neck] = transformLandmarkToVRMPose(neckPosition);
 
     // Head
-    vrmPose[VRMHumanBoneName.Head] = transformLandmarkToVRMPose(nose);
+    const headOffset = neckPosition.clone().add(new THREE.Vector3(0, 0.1, 0)); // 仮のヘッド位置
+    const headRotation = computeBoneRotation(neckPosition, headOffset);
+    vrmPose[VRMHumanBoneName.Head] = {
+      rotation: [
+        headRotation.x,
+        headRotation.y,
+        headRotation.z,
+        headRotation.w,
+      ],
+    };
 
     // Left Upper Arm
-    vrmPose[VRMHumanBoneName.LeftUpperArm] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.leftShoulder],
+    const leftElbow = pose[MediaPipePoseLandmarksIndex.leftElbow];
+    const leftUpperArmRotation = computeBoneRotation(
+      new THREE.Vector3(leftShoulder.x, leftShoulder.y, leftShoulder.z),
+      new THREE.Vector3(leftElbow.x, leftElbow.y, leftElbow.z),
     );
+    vrmPose[VRMHumanBoneName.LeftUpperArm] = {
+      rotation: [
+        leftUpperArmRotation.x,
+        leftUpperArmRotation.y,
+        leftUpperArmRotation.z,
+        leftUpperArmRotation.w,
+      ],
+    };
 
-    // Left Lower Arm
-    vrmPose[VRMHumanBoneName.LeftLowerArm] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.leftElbow],
-    );
+    //   // Left Lower Arm
+    //   const leftWrist = pose[MediaPipePoseLandmarksIndex.leftWrist];
+    //   const leftLowerArmRotation = computeBoneRotation(
+    //     new THREE.Vector3(leftElbow.x, leftElbow.y, leftElbow.z),
+    //     new THREE.Vector3(leftWrist.x, leftWrist.y, leftWrist.z),
+    //   );
+    //   vrmPose[VRMHumanBoneName.LeftLowerArm] = {
+    //     rotation: [
+    //       leftLowerArmRotation.x,
+    //       leftLowerArmRotation.y,
+    //       leftLowerArmRotation.z,
+    //       leftLowerArmRotation.w,
+    //     ],
+    //   };
 
-    // Left Hand
-    vrmPose[VRMHumanBoneName.LeftHand] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.leftWrist],
-    );
+    //   // Right Upper Arm
+    //   const rightElbow = pose[MediaPipePoseLandmarksIndex.rightElbow];
+    //   const rightUpperArmRotation = computeBoneRotation(
+    //     new THREE.Vector3(rightShoulder.x, rightShoulder.y, rightShoulder.z),
+    //     new THREE.Vector3(rightElbow.x, rightElbow.y, rightElbow.z),
+    //   );
+    //   vrmPose[VRMHumanBoneName.RightUpperArm] = {
+    //     rotation: [
+    //       rightUpperArmRotation.x,
+    //       rightUpperArmRotation.y,
+    //       rightUpperArmRotation.z,
+    //       rightUpperArmRotation.w,
+    //     ],
+    //   };
 
-    // Right Upper Arm
-    vrmPose[VRMHumanBoneName.RightUpperArm] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.rightShoulder],
-    );
-
-    // Right Lower Arm
-    vrmPose[VRMHumanBoneName.RightLowerArm] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.rightElbow],
-    );
-
-    // Right Hand
-    vrmPose[VRMHumanBoneName.RightHand] = transformLandmarkToVRMPose(
-      pose[MediaPipePoseLandmarksIndex.rightWrist],
-    );
+    //   // Right Lower Arm
+    //   const rightWrist = pose[MediaPipePoseLandmarksIndex.rightWrist];
+    //   const rightLowerArmRotation = computeBoneRotation(
+    //     new THREE.Vector3(rightElbow.x, rightElbow.y, rightElbow.z),
+    //     new THREE.Vector3(rightWrist.x, rightWrist.y, rightWrist.z),
+    //   );
+    //   vrmPose[VRMHumanBoneName.RightLowerArm] = {
+    //     rotation: [
+    //       rightLowerArmRotation.x,
+    //       rightLowerArmRotation.y,
+    //       rightLowerArmRotation.z,
+    //       rightLowerArmRotation.w,
+    //     ],
+    //   };
   }
 
   return vrmPose;
+};
+
+const computeBoneRotation = (
+  from: THREE.Vector3,
+  to: THREE.Vector3,
+): THREE.Quaternion => {
+  const boneVector = new THREE.Vector3().subVectors(to, from).normalize();
+  const defaultDirection = new THREE.Vector3(0, 1, 0); // ボーンのデフォルト方向（Y軸）
+  const quaternion = new THREE.Quaternion().setFromUnitVectors(
+    defaultDirection,
+    boneVector,
+  );
+  return quaternion;
 };
 
 export const convertMediaPipeToThreeJS = (x: number, y: number, z: number) => {
