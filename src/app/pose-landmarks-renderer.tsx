@@ -6,8 +6,7 @@ export const PoseLandmarksRenderer = ({
 }: {
   worldLandmarks: PoseLandmarkerResult["worldLandmarks"] | undefined;
 }) => {
-  if (!worldLandmarks || !worldLandmarks) return null;
-
+  if (!worldLandmarks) return null;
   return (
     <>
       {worldLandmarks.map((pose, poseIndex) =>

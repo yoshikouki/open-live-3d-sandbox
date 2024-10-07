@@ -24,33 +24,33 @@ export const CharacterViewer = () => {
 
   const smoothedWorldLandmarks = poseLandmarks?.worldLandmarks.map(
     (pose, poseIndex) =>
-      pose.map((landmark, landmarkIndex) => {
-        if (landmarkIndex > MediaPipePoseLandmarksIndex.rightHip) return null;
+      pose
+        .slice(0, MediaPipePoseLandmarksIndex.rightHip + 1)
+        .map((landmark, landmarkIndex) => {
+          const key = `pose-${poseIndex}-landmark-${landmarkIndex}`;
+          const previous = smoothedPoseLandmarksRef.current[key];
+          const [x, y, z] = convertMediaPipeToThreeJS(
+            landmark.x,
+            landmark.y,
+            landmark.z,
+          );
 
-        const key = `pose-${poseIndex}-landmark-${landmarkIndex}`;
-        const previous = smoothedPoseLandmarksRef.current[key];
-        const [x, y, z] = convertMediaPipeToThreeJS(
-          landmark.x,
-          landmark.y,
-          landmark.z,
-        );
-
-        if (!previous) {
-          // First frame
-          smoothedPoseLandmarksRef.current[key] = [x, y, z];
-          return { x, y, z };
-        }
-        // Apply EMA
-        const smoothedX = EMA_ALPHA * x + (1 - EMA_ALPHA) * previous[0];
-        const smoothedY = EMA_ALPHA * y + (1 - EMA_ALPHA) * previous[1];
-        const smoothedZ = EMA_ALPHA * z + (1 - EMA_ALPHA) * previous[2];
-        smoothedPoseLandmarksRef.current[key] = [
-          smoothedX,
-          smoothedY,
-          smoothedZ,
-        ];
-        return { x: smoothedX, y: smoothedY, z: smoothedZ };
-      }),
+          if (!previous) {
+            // First frame
+            smoothedPoseLandmarksRef.current[key] = [x, y, z];
+            return { ...landmark, x, y, z };
+          }
+          // Apply EMA
+          const smoothedX = EMA_ALPHA * x + (1 - EMA_ALPHA) * previous[0];
+          const smoothedY = EMA_ALPHA * y + (1 - EMA_ALPHA) * previous[1];
+          const smoothedZ = EMA_ALPHA * z + (1 - EMA_ALPHA) * previous[2];
+          smoothedPoseLandmarksRef.current[key] = [
+            smoothedX,
+            smoothedY,
+            smoothedZ,
+          ];
+          return { ...landmark, x: smoothedX, y: smoothedY, z: smoothedZ };
+        }),
   );
 
   const _onCharacterLoaded = useCallback(
