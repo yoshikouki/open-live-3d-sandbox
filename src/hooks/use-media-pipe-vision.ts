@@ -34,6 +34,10 @@ const initializePoseLandmarker = async () => {
       delegate: "GPU",
     },
     runningMode: "VIDEO",
+    // Ref: https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker#configurations_options
+    minPoseDetectionConfidence: 0.9,
+    minPosePresenceConfidence: 0.9,
+    minTrackingConfidence: 0.9,
   });
   return landmarker;
 };
@@ -46,7 +50,8 @@ export const useMediaPipeVision = (props?: {
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(
     null,
   );
-  const poseLandmarkerResultRef = useRef<PoseLandmarkerResult | null>(null);
+  const [poseLandmarkerResult, setPoseLandmarkerResult] =
+    useState<PoseLandmarkerResult | null>(null);
   const [_isReady, _setIsReady] = useState(false);
 
   const detect = useCallback(() => {
@@ -55,7 +60,7 @@ export const useMediaPipeVision = (props?: {
       videoRef.current,
       performance.now(),
     );
-    poseLandmarkerResultRef.current = results;
+    setPoseLandmarkerResult(results);
     return results;
   }, [poseLandmarker]);
 
@@ -102,5 +107,5 @@ export const useMediaPipeVision = (props?: {
     };
   }, [onFrame]);
 
-  return { videoRef, detect, poseLandmarks: poseLandmarkerResultRef.current };
+  return { videoRef, detect, poseLandmarks: poseLandmarkerResult };
 };

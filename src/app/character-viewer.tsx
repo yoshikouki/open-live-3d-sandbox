@@ -1,20 +1,17 @@
 "use client";
 
 import { useMediaPipeVision } from "@/hooks/use-media-pipe-vision";
-import {
-  type VRM,
-  VRMHumanBoneName,
-  VRMLoaderPlugin,
-  VRMUtils,
-} from "@pixiv/three-vrm";
+import { poseToVrm } from "@/lib/pose-to-vrm";
+import { type VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, type RenderCallback, useFrame } from "@react-three/fiber";
 import { useCallback, useEffect, useState } from "react";
 import * as THREE from "three";
 import { type GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
+import { PoseLandmarksRenderer } from "./pose-landmarks-renderer";
 
 export const CharacterViewer = () => {
-  const { videoRef } = useMediaPipeVision();
+  const { videoRef, poseLandmarks } = useMediaPipeVision();
   const [characterGltf, setCharacterGltf] = useState<GLTF>();
 
   const onCharacterLoaded = useCallback(
@@ -23,24 +20,10 @@ export const CharacterViewer = () => {
   );
 
   const onFrame: RenderCallback = (state, _delta) => {
-    if (!characterGltf) return;
+    if (!poseLandmarks || !characterGltf) return;
     const vrm: VRM = characterGltf.userData.vrm;
-    const maxRotation = Math.PI / 6; // 最大回転角度を小さくして自然な動きに
-    const speed = 0.5; // 回転速度を遅くして自然な動きに
-    const time = state.clock.getElapsedTime();
-    const headRotation = Math.sin(time * speed) * maxRotation;
-
-    vrm.humanoid.setRawPose({
-      // [VRMHumanBoneName.Head]: {
-      //   rotation: [0, headRotation * 0.1, 0, 1],
-      // },
-      [VRMHumanBoneName.Neck]: {
-        rotation: [0, headRotation * 0.3, 0, 1],
-      },
-      // [VRMHumanBoneName.Hips]: {
-      //   rotation: [0, headRotation * 0.9, 0, 1],
-      // },
-    });
+    const pose = poseToVrm(poseLandmarks);
+    vrm.humanoid.setRawPose(pose);
   };
 
   return (
@@ -66,17 +49,21 @@ export const CharacterViewer = () => {
         <OrbitControls
           enableZoom={true}
           enablePan={true}
-          enableDamping={false}
-          target={new THREE.Vector3(0, 1.5, 0)}
-          minDistance={1}
-          maxDistance={3}
+          enableDamping={true}
+          target={new THREE.Vector3(0, 0, 0)}
+          minDistance={5}
+          maxDistance={10}
+          // target={new THREE.Vector3(0, 1.5, 0)}
+          // minDistance={1}
+          // maxDistance={3}
         />
 
-        <Character
+        {/* <Character
           characterGltf={characterGltf}
           onCharacterLoaded={onCharacterLoaded}
           onFrame={onFrame}
-        />
+        /> */}
+        <PoseLandmarksRenderer poseLandmarks={poseLandmarks} />
 
         <gridHelper />
       </Canvas>
@@ -88,7 +75,7 @@ export const CharacterViewer = () => {
             autoPlay
             playsInline
             ref={videoRef}
-            className="h-full w-full rounded-lg"
+            className="h-full w-full rounded-lg hidden"
             style={{ width: "640px", height: "480px" }}
           />
         </div>
